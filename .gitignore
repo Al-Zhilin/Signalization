@@ -1,4 +1,3 @@
-#Файлы, которые мы не пушим:
 build/
-
-/README.md
+passwords.txt
+README.md
