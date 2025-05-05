@@ -1,0 +1,252 @@
+#include <ArduinoOTA.h>
+#include <ESP32Ping.h>
+#include <EEPROM.h>
+#include <FastBot.h>
+#include <GyverDS18Array.h>
+
+#define WIFI_RES_PERIOD 2 * 60 * 1000                                          //если по истечении этого периода (после начала попыток подключения) к WiFi не получиться подключиться, плата будет перезагружена
+#define INIT_KEY 2                                                             //изменить ключ, чтобы инициализировать EEPROM
+#define ssid ""                                                                //имя WiFi сети
+#define password ""                                                            //пароль от WiFi сети
+#define BOT_TOKEN ""                                                           //идентификатор бота в телеге
+#define MONITORING "" //начало запроса на OpenMonitoring
+#define FIRE_SENSOR1 39                                                        //пин, к которому подключен 1-й датчик дыма
+#define FIRE_SENSOR2 36                                                        //пин, к которому подключен 2-й датчик дыма
+#define RELAY1 4                                                               //пин управления первым реле
+#define RELAY2 18                                                              //пин управления вторым реле
+#define RELAY3 17                                                              //пин управления третьим реле
+#define RELAY4 16                                                              //пин управления четвертым реле
+#define DATCH_HOME 22                                                          //пин, к которому подключен домашний датчик движения
+#define DATCH_1 23                                                             //пин, к которому подключен первый датчик движения
+#define DATCH_2 25                                                             //пин, к которому подключен второй датчик движения
+#define DATCH_3 26                                                             //пин, к которому подключен третий датчик движения
+#define VOLT_SENSOR 13                                                         //пин, к которому подключено реле контроля напряжения
+#define ThermoPin 32                                                           //пин, к которому подключен(-ы) датчик(-и) температуры
+#define Version 23                                                             //текущая версия прошивки (указывать целым числом, без точки)   !! из-за ограничений byte может быть 0-255, поломается как миннимум EEPROM !!
+#define IS_VERSION_UPDATE 0                                                    //включение/отключение сообщений "Система обновлена...". Запись/чтение версий в/из память(-и) не будет прекращаться при любом значении
+#define PING_PERIOD 2 * 60 * 1000                                              //период между ping-запросами, 1 число - минуты
+#define HTTP_PERIOD 1.5 * 60 * 1000                                            //период отправки данных на Open Monitoring (должен быть всегда > 1 минуты), 1 число - минуты
+#define PERIOD_OPROSA 200                                                      //период опроса датчиков движения (когда нет сработок), миллисекунды
+#define MESS_UPD 10 * 1000                                                     //период обновления сообщения (дата, время, температура..)
+#define SBORKA_PERIOD 7 * 1000                                                 //период, по истечении которого (без изменений состояний датчиков) меню будет пересобрано
+#define FIRE_READ_PERIOD 500                                                   //период опроса датчиков дыма
+#define FIRE_RESET_PERIOD 2500                                                 //время сброса питания пожарных датчиков
+#define USERS_NUM 2                                                            //кол-во пользователей (с начала общего списка), которым будет показана часть меню с управлением реле, от которых можно обновлять прошивку и т.д.
+#define FIRE_RELE_NUM 1                                                        //номер реле, через которое питаются датчики дыма (нумерация с 1)
+#define FIRE_MESS_PERIOD 3 * 1000                                              //период между сообщениями о сработке пож. датчика(-ов) (1 число - секунды)
+#define SBROS_MODEMA 1                                                         //включить функцию сброса питания модема при отсутствиие интернета
+#define RESET_REASON 0                                                         //0 - модем будет сброшен при ЛЮБОМ отсутствии интернета, 1 - при отсутствии интернета ТОЛЬКО И СРАЗУ после запуска системы
+#define SBROS_PERIOD1 2 * 60 * 1000                                            //период перед первой перезагрузкой модема (только при включенной функции), 1 число - минуты
+#define SBROS_PERIOD2 20 * 60 * 1000                                           //период между последующими попытками перезагрузки модема (только при включенной функции), 1 число - минуты
+#define SBROS_PIT 10 * 1000                                                    //период на который будет отключено питание модема, 1 число - секунды
+#define MODEM_RELE_NUM 2                                                       //номер реле, через которое питается модем (нумерация с 1)
+#define NO_ELECTRICITY 0                                                       //вкл/выкл (1/0 соотв.) уведомлений об изменении наличия напряжения питающей сети (полезно только при наличии бесперебойника на питание платы)
+#define ENABLE_TERM1 1                                                         //подключить температурный датчик 1
+#define ENABLE_TERM2 0                                                         //подключить температурный датчик 2
+#define TERM1_NAME "Дом"                                                       //имя для первого температурного датчика
+#define TERM1_NAME "Улица"                                                     //имя для второго температурного датчика
+
+const byte d_pins[] = {DATCH_HOME, DATCH_1, DATCH_2, DATCH_3}, r_pins[] = {RELAY1, RELAY2, RELAY3, RELAY4}, f_pins[] = {FIRE_SENSOR1, FIRE_SENSOR2};
+
+const String Users[] = {
+  "",   // админ
+  "",
+  "",
+};
+
+const char* d_names[]  = {
+  "Датч0",
+  "Датч1",
+  "Датч2",
+  "Датч3",
+};
+
+const char* r_names[]  = {
+  "Реле1",
+  "Реле2",
+  "Реле3",
+  "Реле4",
+};
+
+uint64_t addr[] = {
+    0x760000006AB3CC28,     //1 датчик
+    0x950000006B043C28,     //2 датчик
+};
+FastBot bot(BOT_TOKEN);
+GyverDS18Array ds(14, addr, 3);
+
+byte PeriodVkl = 0, PeriodSrb = 0;  
+int32_t MenuID[(sizeof(Users) / sizeof(Users[0]))] = {}, TimeID[(sizeof(Users) / sizeof(Users[0]))] = {};
+uint32_t startUnix = 0, sborka_timer = 0;
+bool relays[(sizeof(r_pins) / sizeof(r_pins[0]))] = {}, datch[(sizeof(d_pins) / sizeof(d_pins[0]))] = {}, faza_menu[(sizeof(Users) / sizeof(Users[0]))] = {}, autovkl_flag = true, sborka_flag = false, fire_on = true, fireres_flag = false, a_flag = true;
+float average_ping = 0, temp[2] = {};
+
+
+
+void setup() {
+  Serial.begin(115200);
+  ConnectWiFi();
+  
+  ArduinoOTA.setHostname("ESP32-S");
+  ArduinoOTA.setPassword("Signalization");
+  ArduinoOTA.begin();
+  
+  EEPROM.begin(11);
+
+  String str = "";
+  for (byte i = 0; i < (sizeof(Users) / sizeof(Users[0])); i++) {
+    str += Users[i];
+    str += ",";
+  }
+
+  bot.setChatID(str);
+  bot.clearServiceMessages(true);                                                                           
+  bot.setLimit(4);
+  bot.notify(false);
+
+  if (EEPROM.read(0) != INIT_KEY) {
+    EEPROM.put(0, INIT_KEY);
+    EEPROM_INIT();
+  }
+
+  bot.unpinAll();
+  bot.notify(false);
+
+  bot.sendMessage("---------------------- Здравствуйте! -----------------------\nДля просмотра списка команд жми: /list");
+
+  delay(1000);      //самая глупая, но работающая заплатка в мире :D
+
+  for (byte i = 0; i < (sizeof(Users) / sizeof(Users[0])); i++) {
+    bot.sendMessage("скоро все будет...", Users[i]);
+    bot.pinMessage(bot.lastBotMsg());
+    TimeID[i] = bot.lastBotMsg();
+  }
+
+  bot.notify(true);
+
+  EEPROM_START();
+
+  //ds.setResolution(12);
+  ds.requestTemp();
+
+  Start();
+
+  startUnix = bot.getUnix();
+  bot.attach(newMsg);
+
+  Sborka(0);
+}
+
+void loop() {
+  static bool internet = Pingyem(), int_flag = true, a_flag = false, start_inter = internet;
+  static uint32_t ping_timer = millis(), http_timer = millis(), srb_timer = millis(), autovkl_timer = millis(), mess_timer = millis(), fire_read_timer = millis(), twi = 0;
+  static int32_t time_no_int = 0;
+
+  ArduinoOTA.handle();
+
+  bot.tick();
+
+  if (millis() - ping_timer >= PING_PERIOD) {
+    ping_timer = millis();
+    if (WiFi.status() != WL_CONNECTED) {
+      WiFi.disconnect();
+      ConnectWiFi();
+    }
+    internet = Pingyem();
+  }
+
+  while (!internet) {
+    if (int_flag) {
+      twi = millis();
+      int_flag = false;
+    }
+
+    if (SBROS_MODEMA) {
+      if ((!RESET_REASON && !internet) || (RESET_REASON && !start_inter)) {
+        SbrosModema();
+      }
+    }
+
+    if (WiFi.status() != WL_CONNECTED) {
+      WiFi.disconnect();
+      ConnectWiFi();
+    }
+
+    if (millis() - ping_timer >= 40 * 1000) {
+      ping_timer = millis();
+      internet = Pingyem();
+    }
+  }
+
+  if (internet && !start_inter) ESP.restart();
+
+  if (internet && !int_flag) {
+    //чото можно делать
+    time_no_int = (millis() - twi) / 60000;
+    int_flag = true;
+  }
+
+  if (NO_ELECTRICITY) {
+    static bool volt_flag = false;
+    bool volts = digitalRead(VOLT_SENSOR);
+    if (volts && !volt_flag) {
+      volt_flag = true;
+      bot.sendMessage(AlarmString(0, 1));
+    }
+
+    else if (!volts && volt_flag) {
+      volt_flag = false;
+      bot.sendMessage(AlarmString(0, 0));
+    }
+  }
+
+  if (ds.ready()) {
+    Temp();
+  }
+  
+  if (millis() - http_timer >= HTTP_PERIOD) {
+    http_timer = millis();
+    HTTPGET(temp[0], temp[1], time_no_int);
+    time_no_int = 0;
+  }
+
+  if (!a_flag && autovkl_flag) {
+    a_flag = true;
+    autovkl_timer = millis();
+  }
+
+  if (a_flag && !autovkl_flag)  a_flag = false;
+
+  if (millis() - srb_timer >= PeriodSrb * 1000) {
+    bool res = Sensors(0);
+    if (res) {
+      autovkl_timer = srb_timer = millis();
+    }
+    else srb_timer += PERIOD_OPROSA;
+  }
+
+  if (a_flag && autovkl_flag && millis() - autovkl_timer >= PeriodVkl * 60 * 1000) {
+    Sensors(1);
+    autovkl_timer = millis();
+  }
+
+  if (millis() - mess_timer >= MESS_UPD) {
+    mess_timer = millis();
+    Date(0);
+  }
+
+  if (sborka_flag && millis() - sborka_timer >= SBORKA_PERIOD) {
+    sborka_timer = millis();
+    sborka_flag = false;
+    Sborka(0);
+  }
+
+  if (fire_on && millis() - fire_read_timer >= FIRE_READ_PERIOD) {
+    fire_read_timer = millis();
+    Fire(0);
+  }
+
+  if (fireres_flag) {
+    Fire(1);
+  }
+}
