@@ -4,7 +4,7 @@
 #include <FastBot.h>
 #include <GyverDS18Array.h>
 #include "passwords.txt"
-
+ 
 #define WIFI_RES_PERIOD 2 * 60 * 1000                                          //если по истечении этого периода (после начала попыток подключения) к WiFi не получиться подключиться, плата будет перезагружена
 #define INIT_KEY 2                                                             //изменить ключ, чтобы инициализировать EEPROM
 #define FIRE_SENSOR1 39                                                        //пин, к которому подключен 1-й датчик дыма

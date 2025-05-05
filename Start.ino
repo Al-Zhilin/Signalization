@@ -1,6 +1,6 @@
 void Start() {
 
-  pinMode(DATCH_HOME, INPUT_PULLUP);
+  pinMode(DATCH_HOME, INPUT_PULLUP); 
   pinMode(DATCH_1, INPUT_PULLUP);
   pinMode(DATCH_2, INPUT_PULLUP);
   pinMode(DATCH_3, INPUT_PULLUP);

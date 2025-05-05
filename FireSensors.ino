@@ -10,7 +10,7 @@ void Fire(bool f_mode) {    // 0 - опрос датчиков,   1 - сброс
         if (f2_flag)  {
           message += AlarmString(2, 3+i);
         }
-        f1_flag = true;
+        f1_flag = true; 
         if (f2_flag)  mess_delay = millis();
       }
     }

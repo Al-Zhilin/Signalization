@@ -1,9 +1,9 @@
 bool Sensors(byte s_mode) {     //0 - проверка на отправку сообщений, 1 - автовключить датчики (всегда при вызове)
   static uint32_t srb3_timer[2] = {millis(), millis()};
   String message = "";
-
+ 
   if (!s_mode) {
-    bool al_flag = false;
+    bool al_flag = false; 
     for (byte i = 0; i < (sizeof(d_pins)/sizeof(d_pins[0])); i++) {
       if (digitalRead(d_pins[i]) && datch[i]) {
         if (i == 3 or i == 2) {

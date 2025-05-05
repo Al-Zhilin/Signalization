@@ -14,7 +14,7 @@ void HTTPGET(float temp1, float temp2, int tni) {
   http.begin(req);
     
   int result = http.GET();
-    
+     
   if (result <= 0) {
      if (get_failed)  {
         if (fail_flag) {

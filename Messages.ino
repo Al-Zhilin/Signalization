@@ -139,7 +139,7 @@ void newMsg(FB_msg& msg) {
         faza_menu[i] = 0;
         Sborka(0);
         break;
-      }
+      } 
     }
     bot.deleteMessage(bot.lastUsrMsg());
   }

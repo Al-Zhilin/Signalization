@@ -2,7 +2,7 @@ void Temp() {
   if (!ENABLE_TERM1 && !ENABLE_TERM2) return;
 
   static bool error_flag[2] = {true, true};
-  float new_znach[2] = {0, 0};
+  float new_znach[2] = {0, 0}; 
   
   if (ENABLE_TERM1) {
     if (!ds.readTemp(0)) {

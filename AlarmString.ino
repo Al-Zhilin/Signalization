@@ -1,4 +1,4 @@
-String AlarmString(byte comm, byte num) {    // 0 - свет, 1 - датчики движения, 2 - пожарные датчики, 3 - Date(1)
+String AlarmString(byte comm, byte num) {    // 0 - свет, 1 - датчики движения, 2 - пожарные датчики, 3 - Date(1).
   if (!comm)  {
     switch (num)  {   // 0 - вкл свет, 1 - откл свет
       case 0:
@@ -25,7 +25,7 @@ String AlarmString(byte comm, byte num) {    // 0 - свет, 1 - датчики
       
       case 3:
         return String("Кто-то на участке №3! \n");
-      
+       
       default:
         return String("err1 \n");
     }

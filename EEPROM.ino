@@ -9,7 +9,7 @@ void EEPROM_INIT() {
 
 void EEPROM_START() {
   EEPROM.get(2, PeriodVkl);
-  EEPROM.get(3, PeriodSrb);
+  EEPROM.get(3, PeriodSrb); 
   EEPROM.get(4, a_flag);
 }
 

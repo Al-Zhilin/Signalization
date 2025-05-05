@@ -11,4 +11,4 @@ void ConnectWiFi() {
   if (WiFi.status() != WL_CONNECTED) {
     ESP.restart();
   }
-}
+} 

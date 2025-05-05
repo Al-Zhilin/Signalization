@@ -16,4 +16,4 @@ void Command_list(String user) {
   bot.sendMessage(F("/fireres - сброс питания пожарных датчиков"), user);
   //bot.sendMessage("/upd - показывает изменения, внесенные в последнем обновлении", user);
   bot.sendMessage(F("/limits - показ установленных таймеров (на сработки, включения датчиков и тд"), user);
-}
+} 

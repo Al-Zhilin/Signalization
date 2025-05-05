@@ -1,4 +1,4 @@
-void Sborka(bool vk_flag) {
+ void Sborka(bool vk_flag) {
   autovkl_flag = false;
   static byte old_faza[(sizeof(Users)/sizeof(Users[0]))] = {254};
   static byte old_datch[(sizeof(d_pins)/sizeof(d_pins[0]))];

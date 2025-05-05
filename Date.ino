@@ -12,7 +12,7 @@ String Date(byte d_mode) {        //0 - для сообщения, 1 - дата 
     DaT += t.timeString()[3]; 
     DaT += t.timeString()[4];
     DaT += F(".\n");
-
+ 
     if (ENABLE_TERM1) {
       DaT += TERM1_NAME;
       DaT += ": ";
