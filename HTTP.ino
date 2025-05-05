@@ -1,7 +1,7 @@
 void HTTPGET(float temp1, float temp2, int tni) {
   static bool get_failed = false, fail_flag = true;
 
-  String req = ; 
+  String req = MONITORING; 
   req += temp1;
   req += "&p2=";
   req += tni;
