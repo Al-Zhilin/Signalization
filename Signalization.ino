@@ -3,13 +3,10 @@
 #include <EEPROM.h>
 #include <FastBot.h>
 #include <GyverDS18Array.h>
+#include "passwords.txt"
 
 #define WIFI_RES_PERIOD 2 * 60 * 1000                                          //если по истечении этого периода (после начала попыток подключения) к WiFi не получиться подключиться, плата будет перезагружена
 #define INIT_KEY 2                                                             //изменить ключ, чтобы инициализировать EEPROM
-#define ssid ""                                                                //имя WiFi сети
-#define password ""                                                            //пароль от WiFi сети
-#define BOT_TOKEN ""                                                           //идентификатор бота в телеге
-#define MONITORING "" //начало запроса на OpenMonitoring
 #define FIRE_SENSOR1 39                                                        //пин, к которому подключен 1-й датчик дыма
 #define FIRE_SENSOR2 36                                                        //пин, к которому подключен 2-й датчик дыма
 #define RELAY1 4                                                               //пин управления первым реле
@@ -43,35 +40,9 @@
 #define NO_ELECTRICITY 0                                                       //вкл/выкл (1/0 соотв.) уведомлений об изменении наличия напряжения питающей сети (полезно только при наличии бесперебойника на питание платы)
 #define ENABLE_TERM1 1                                                         //подключить температурный датчик 1
 #define ENABLE_TERM2 0                                                         //подключить температурный датчик 2
-#define TERM1_NAME "Дом"                                                       //имя для первого температурного датчика
-#define TERM1_NAME "Улица"                                                     //имя для второго температурного датчика
 
 const byte d_pins[] = {DATCH_HOME, DATCH_1, DATCH_2, DATCH_3}, r_pins[] = {RELAY1, RELAY2, RELAY3, RELAY4}, f_pins[] = {FIRE_SENSOR1, FIRE_SENSOR2};
 
-const String Users[] = {
-  "",   // админ
-  "",
-  "",
-};
-
-const char* d_names[]  = {
-  "Датч0",
-  "Датч1",
-  "Датч2",
-  "Датч3",
-};
-
-const char* r_names[]  = {
-  "Реле1",
-  "Реле2",
-  "Реле3",
-  "Реле4",
-};
-
-uint64_t addr[] = {
-    0x760000006AB3CC28,     //1 датчик
-    0x950000006B043C28,     //2 датчик
-};
 FastBot bot(BOT_TOKEN);
 GyverDS18Array ds(14, addr, 3);
 
@@ -87,8 +58,8 @@ void setup() {
   Serial.begin(115200);
   ConnectWiFi();
   
-  ArduinoOTA.setHostname("ESP32-S");
-  ArduinoOTA.setPassword("Signalization");
+  ArduinoOTA.setHostname(OTA_NAME);
+  ArduinoOTA.setPassword(OTA_PASS);
   ArduinoOTA.begin();
   
   EEPROM.begin(11);
