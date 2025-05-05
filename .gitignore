@@ -1,3 +1,4 @@
+# Не пушим:
 build/
 passwords.txt
 README.md
