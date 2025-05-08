@@ -1,17 +1,23 @@
-void SbrosModema() {
-  /*static bool faza_s = false, first_s = true;                                                                               //в разработке
-  static uint32_t tmr = millis();
+void SbrosModema(bool *ping_flag, bool *first_sbros) {
+  static uint32_t tmr = millis(), hold_timer = millis();
+  static bool faza_sbrosa = true;
 
-  if (!faza_s && ((first_s && millis() - tmr >= SBROS_PERIOD1) || (!first_s && millis() - tmr >= SBROS_PERIOD2))) {
-    tmr = millis();
-    faza_s = true;
-    digitalWrite(r_pins[MODEM_RELE_NUM-1], LOW);
+  if ((*first_sbros && millis() - tmr >= SBROS_PERIOD1) || (!(*first_sbros) && millis() - tmr >= SBROS_PERIOD2)) {
+    *ping_flag = false;
+    if (faza_sbrosa) {                                                   //питание подается
+      digitalWrite(r_pins[MODEM_RELE_NUM-1], LOW);
+      hold_timer = millis();
+      faza_sbrosa = false;
+    }
+
+    else if (millis() - hold_timer >= POWER_RESET_TIME) {                //питание выключено
+      digitalWrite(r_pins[MODEM_RELE_NUM-1], HIGH);
+      faza_sbrosa = true;
+      tmr = millis();
+      *first_sbros = false;
+      *ping_flag = true;
+    }
   }
- 
-  if (faza_s && millis() - tmr >= SBROS_PIT) {
-    faza_s = false;
-    first_s = false;
-    tmr = millis();
-    digitalWrite(r_pins[MODEM_RELE_NUM-1], HIGH);
-  }*/
+
+  else  *ping_flag = true;
 }

@@ -35,7 +35,7 @@
 #define RESET_REASON 0                                                         //0 - модем будет сброшен при ЛЮБОМ отсутствии интернета, 1 - при отсутствии интернета ТОЛЬКО И СРАЗУ после запуска системы
 #define SBROS_PERIOD1 2 * 60 * 1000                                            //период перед первой перезагрузкой модема (только при включенной функции), 1 число - минуты
 #define SBROS_PERIOD2 20 * 60 * 1000                                           //период между последующими попытками перезагрузки модема (только при включенной функции), 1 число - минуты
-#define SBROS_PIT 10 * 1000                                                    //период на который будет отключено питание модема, 1 число - секунды
+#define POWER_RESET_TIME 10 * 1000                                             //период на который будет отключено питание модема, 1 число - секунды
 #define MODEM_RELE_NUM 2                                                       //номер реле, через которое питается модем (нумерация с 1)
 #define NO_ELECTRICITY 0                                                       //вкл/выкл (1/0 соотв.) уведомлений об изменении наличия напряжения питающей сети (полезно только при наличии бесперебойника на питание платы)
 #define ENABLE_TERM1 1                                                         //подключить температурный датчик 1
@@ -127,6 +127,9 @@ void loop() {
   }
 
   while (!internet) {
+    static bool allow_ping = true;
+    static bool first_sbros = true;
+
     if (int_flag) {
       twi = millis();
       int_flag = false;
@@ -134,7 +137,7 @@ void loop() {
 
     if (SBROS_MODEMA) {
       if ((!RESET_REASON && !internet) || (RESET_REASON && !start_inter)) {
-        SbrosModema();
+        SbrosModema(&allow_ping, &first_sbros);
       }
     }
 
@@ -143,10 +146,12 @@ void loop() {
       ConnectWiFi();
     }
 
-    if (millis() - ping_timer >= 40 * 1000) {
+    if (allow_ping && millis() - ping_timer >= 20 * 1000) {
       ping_timer = millis();
       internet = Pingyem();
     }
+
+    if (internet) first_sbros = true;
   }
 
   if (internet && !start_inter) ESP.restart();
