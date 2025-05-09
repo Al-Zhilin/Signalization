@@ -103,7 +103,7 @@ void newMsg(FB_msg& msg) {
   }
 
   else if (msg.text == "/timerOn")  {
-    if (!a_flag)  {
+    if (!autovkl_flag)  {
       autovkl_flag = true;
       EEPROM_PUT(4, 1);
       bot.sendMessage("Автовключение теперь активно!", msg.chatID);
@@ -113,7 +113,7 @@ void newMsg(FB_msg& msg) {
   }
 
   else if (msg.text == "/timerOff")  {
-    if (a_flag)  {
+    if (autovkl_flag)  {
       autovkl_flag = false;
       EEPROM_PUT(4, 0);
       bot.sendMessage("Автовключение теперь неактивно!", msg.chatID);
