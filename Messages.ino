@@ -20,7 +20,7 @@ void newMsg(FB_msg& msg) {
     bot.sendMessage("Между сработками - " + String(EEPROM.read(3)) + "/" + String(PeriodSrb) + " секунд", msg.chatID);
     bot.sendMessage("Между автовключениями датчиков - " + String(EEPROM.read(2)) + "/" + String(PeriodVkl) + " минут", msg.chatID);
     bot.sendMessage("Версия (без разделителей) - " + String(EEPROM.read(1)), msg.chatID);
-    bot.sendMessage("Автовключение: " + String((autovkl_flag) ? "включено" : "выключено"), msg.chatID);
+    bot.sendMessage("Автовключение: " + String((a_flag) ? "включено" : "выключено"), msg.chatID);
   }
 
   else if (msg.text == "/тех работы") {
@@ -103,8 +103,8 @@ void newMsg(FB_msg& msg) {
   }
 
   else if (msg.text == "/timerOn")  {
-    if (!autovkl_flag)  {
-      autovkl_flag = true;
+    if (!a_flag)  {
+      a_flag = true;
       EEPROM_PUT(4, 1);
       bot.sendMessage("Автовключение теперь активно!", msg.chatID);
       if (msg.chatID != Users[0]) bot.sendMessage(msg.username + " активировал автовключение!", Users[0]);
@@ -113,8 +113,8 @@ void newMsg(FB_msg& msg) {
   }
 
   else if (msg.text == "/timerOff")  {
-    if (autovkl_flag)  {
-      autovkl_flag = false;
+    if (a_flag)  {
+      a_flag = false;
       EEPROM_PUT(4, 0);
       bot.sendMessage("Автовключение теперь неактивно!", msg.chatID);
       if (msg.chatID != Users[0]) bot.sendMessage(msg.username + " отключил автовключение!", Users[0]);
@@ -144,7 +144,7 @@ void newMsg(FB_msg& msg) {
     bot.deleteMessage(bot.lastUsrMsg());
   }
 
-  for (byte i = 0; i < (sizeof(d_pins)/sizeof(d_pins[0])); i++) {
+  for (byte i = 0; i < (sizeof(d_pins[0])/sizeof(d_pins[0][0])); i++) {
     if (msg.text.startsWith(d_names[i])) {
       bot.deleteMessage(bot.lastUsrMsg());
       datch[i] = !datch[i];

@@ -1,12 +1,12 @@
- void Sborka(bool vk_flag) {
-  autovkl_flag = false;
+void Sborka(bool vk_flag) {
+
   static byte old_faza[(sizeof(Users)/sizeof(Users[0]))] = {254};
-  static byte old_datch[(sizeof(d_pins)/sizeof(d_pins[0]))];
+  static byte old_datch[(sizeof(d_pins[0])/sizeof(d_pins[0][0]))];
   static byte old_rele[(sizeof(r_pins)/sizeof(r_pins[0]))]; 
 
   if (old_faza[0] == 254) {
     memset(old_faza, 255, (sizeof(Users)/sizeof(Users[0])));
-    memset(old_datch, 255, (sizeof(d_pins)/sizeof(d_pins[0])));
+    memset(old_datch, 255, (sizeof(d_pins[0])/sizeof(d_pins[0][0])));
     memset(old_rele, 255, (sizeof(r_pins)/sizeof(r_pins[0])));
   }
 
@@ -17,16 +17,13 @@
 
     switch (faza_menu[i]) {
       case 0:
-        if (!memcmp(old_datch, datch, (sizeof(d_pins)/sizeof(d_pins[0]))) && faza_menu[i] == old_faza[i]) continue;
+        if (!memcmp(old_datch, datch, (sizeof(d_pins[0])/sizeof(d_pins[0][0]))) && faza_menu[i] == old_faza[i]) continue;
 
-        for (byte j = 0; j < (sizeof(d_pins)/sizeof(d_pins[0])); j++) {
+        for (byte j = 0; j < (sizeof(d_pins[0])/sizeof(d_pins[0][0])); j++) {
           main_menu += d_names[j];
     
           if (datch[j]) main_menu += " [✅] ";
-          else  {
-            main_menu += " [❌] ";
-            autovkl_flag = true;
-          }
+          else  main_menu += " [❌] ";
 
           if (j % 3 == 0) main_menu += "\n";
           else  main_menu += "\t";
@@ -37,7 +34,7 @@
 
 
       case 1:
-        if (!memcmp(old_rele, relays, (sizeof(d_pins)/sizeof(r_pins[0]))) && faza_menu[i] == old_faza[i]) continue;
+        if (!memcmp(old_rele, relays, (sizeof(d_pins[0])/sizeof(r_pins[0]))) && faza_menu[i] == old_faza[i]) continue;
 
         for (byte j = 0; j <(sizeof(r_pins)/sizeof(r_pins[0])); j++)  {
           if (j == FIRE_RELE_NUM-1 || j == MODEM_RELE_NUM-1) continue;
@@ -71,7 +68,7 @@
     }
   }
 
-  memcpy(old_datch, datch, (sizeof(d_pins)/sizeof(d_pins[0])));
+  memcpy(old_datch, datch, (sizeof(d_pins[0])/sizeof(d_pins[0][0])));
   memcpy(old_rele, relays, (sizeof(r_pins)/sizeof(r_pins[0])));
 }
 

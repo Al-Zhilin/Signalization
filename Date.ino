@@ -22,7 +22,7 @@ String Date(byte d_mode) {        //0 - для сообщения, 1 - дата 
     }
 
     if (ENABLE_TERM2) {
-      DaT += TERM1_NAME;
+      DaT += TERM2_NAME;
       DaT += ": ";
       DaT += temp[1];
       DaT += F("°С,  ");
