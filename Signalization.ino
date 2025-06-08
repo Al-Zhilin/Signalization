@@ -3,7 +3,7 @@
 #include <EEPROM.h>
 #include <FastBot.h>
 #include <GyverDS18Array.h>
-#include "passwords.txt"
+#include "passwords.h"
  
 #define WIFI_RES_PERIOD 2 * 60 * 1000                                          //если по истечении этого периода (после начала попыток подключения) к WiFi не получиться подключиться, плата будет перезагружена
 #define INIT_KEY 2                                                             //изменить ключ, чтобы инициализировать EEPROM
@@ -23,7 +23,8 @@
 #define IS_VERSION_UPDATE 0                                                    //включение/отключение сообщений "Система обновлена...". Запись/чтение версий в/из память(-и) не будет прекращаться при любом значении
 #define PING_PERIOD 2 * 60 * 1000                                              //период между ping-запросами, 1 число - минуты
 #define HTTP_PERIOD 1.5 * 60 * 1000                                            //период отправки данных на Open Monitoring (должен быть всегда > 1 минуты), 1 число - минуты
-#define PERIOD_OPROSA 200                                                      //период опроса датчиков движения (когда нет сработок), миллисекунды
+#define PERIOD_OPROSA 200                                                      //период опроса датчиков движения, миллисекунды
+#define SRB_PERIOD 10 * 1000                                                   //допустимый период, в течение которого все сработки, идущие после первой, будут посыласться пользователю (считаться не ложными)
 #define MESS_UPD 10 * 1000                                                     //период обновления сообщения (дата, время, температура..)
 #define SBORKA_PERIOD 7 * 1000                                                 //период, по истечении которого (без изменений состояний датчиков) меню будет пересобрано
 #define FIRE_READ_PERIOD 500                                                   //период опроса датчиков дыма
@@ -41,7 +42,8 @@
 #define ENABLE_TERM1 1                                                         //подключить температурный датчик 1
 #define ENABLE_TERM2 0                                                         //подключить температурный датчик 2
 
-const byte d_pins[] = {DATCH_HOME, DATCH_1, DATCH_2, DATCH_3}, r_pins[] = {RELAY1, RELAY2, RELAY3, RELAY4}, f_pins[] = {FIRE_SENSOR1, FIRE_SENSOR2};
+const byte r_pins[] = {RELAY1, RELAY2, RELAY3, RELAY4}, f_pins[] = {FIRE_SENSOR1, FIRE_SENSOR2};
+const byte d_pins[2][4] = {{DATCH_HOME, DATCH_1, DATCH_2, DATCH_3}, {false, false, true, true}};
 
 FastBot bot(BOT_TOKEN);
 GyverDS18Array ds(14, addr, 3);
@@ -49,7 +51,7 @@ GyverDS18Array ds(14, addr, 3);
 byte PeriodVkl = 0, PeriodSrb = 0;  
 int32_t MenuID[(sizeof(Users) / sizeof(Users[0]))] = {}, TimeID[(sizeof(Users) / sizeof(Users[0]))] = {};
 uint32_t startUnix = 0, sborka_timer = 0;
-bool relays[(sizeof(r_pins) / sizeof(r_pins[0]))] = {}, datch[(sizeof(d_pins) / sizeof(d_pins[0]))] = {}, faza_menu[(sizeof(Users) / sizeof(Users[0]))] = {}, autovkl_flag = true, sborka_flag = false, fire_on = true, fireres_flag = false, a_flag = true;
+bool relays[(sizeof(r_pins) / sizeof(r_pins[0]))] = {}, datch[(sizeof(d_pins[0]) / sizeof(d_pins[0][0]))] = {}, faza_menu[(sizeof(Users) / sizeof(Users[0]))] = {}, sborka_flag = false, fire_on = true, fireres_flag = false, a_flag = true;
 float average_ping = 0, temp[2] = {};
 
 
@@ -94,12 +96,9 @@ void setup() {
   }
 
   bot.notify(true);
-
   EEPROM_START();
-
   //ds.setResolution(12);
   ds.requestTemp();
-
   Start();
 
   startUnix = bot.getUnix();
@@ -109,17 +108,17 @@ void setup() {
 }
 
 void loop() {
-  static bool internet = Pingyem(), int_flag = true, a_flag = false, start_inter = internet;
-  static uint32_t ping_timer = millis(), http_timer = millis(), srb_timer = millis(), autovkl_timer = millis(), mess_timer = millis(), fire_read_timer = millis(), twi = 0;
+  static bool internet = Pingyem(), int_flag = true, start_inter = internet, need_autoOn = false;
+  static uint32_t ping_timer = millis(), http_timer = millis(), mess_timer = millis(), fire_read_timer = millis(), twi = 0, sensor_read_timer = millis(), on_timer = millis();
   static int32_t time_no_int = 0;
 
   ArduinoOTA.handle();
 
   bot.tick();
 
-  if (millis() - ping_timer >= PING_PERIOD) {
+  if (millis() - ping_timer >= PING_PERIOD) {             //пингуем сеть (проверка наличия интернет соединения)
     ping_timer = millis();
-    if (WiFi.status() != WL_CONNECTED) {
+    if (WiFi.status() != WL_CONNECTED) {        //если проблема с интернетом заключается в отсутствующем подключении к WiFi - переподключаемся
       WiFi.disconnect();
       ConnectWiFi();
     }
@@ -146,7 +145,7 @@ void loop() {
       ConnectWiFi();
     }
 
-    if (allow_ping && millis() - ping_timer >= 20 * 1000) {
+    if (allow_ping && millis() - ping_timer >= 20 * 1000) {           //пингуем сеть (проверка наличия интернет соединения)
       ping_timer = millis();
       internet = Pingyem();
     }
@@ -154,15 +153,15 @@ void loop() {
     if (internet) first_sbros = true;
   }
 
-  if (internet && !start_inter) ESP.restart();
+  if (internet && !start_inter) ESP.restart();        //если интернета сразу после запуска платы не было, а теперь появился (перезапускаемся для корректной отправки всех сообщений)
 
-  if (internet && !int_flag) {
+  if (internet && !int_flag) {                  //когда интернета не было, а теперь он появился (можно то-нибудь делать с данными о времени без подключения, например собирать статистику)
     //чото можно делать
     time_no_int = (millis() - twi) / 60000;
     int_flag = true;
   }
 
-  if (NO_ELECTRICITY) {
+  if (NO_ELECTRICITY) {                         //если включена функция уведомлений об отсутствии сетевого напряжения
     static bool volt_flag = false;
     bool volts = digitalRead(VOLT_SENSOR);
     if (volts && !volt_flag) {
@@ -176,53 +175,39 @@ void loop() {
     }
   }
 
-  if (ds.ready()) {
-    Temp();
+  if (millis() - sensor_read_timer >= PERIOD_OPROSA) {
+    sensor_read_timer = millis();
+    checkSensors(&need_autoOn, &on_timer);
   }
+
+  if (a_flag && need_autoOn && millis() - on_timer >= PeriodVkl*1000*60) {
+    need_autoOn = false;
+    setSensorsHigh();
+  }
+
+  if (ds.ready()) Temp();
   
-  if (millis() - http_timer >= HTTP_PERIOD) {
+  if (millis() - http_timer >= HTTP_PERIOD) {         //Отправляем данные на OpenMonitoring по таймеру
     http_timer = millis();
     HTTPGET(temp[0], temp[1], time_no_int);
     time_no_int = 0;
   }
 
-  if (!a_flag && autovkl_flag) {
-    a_flag = true;
-    autovkl_timer = millis();
-  }
-
-  if (a_flag && !autovkl_flag)  a_flag = false;
-
-  if (millis() - srb_timer >= PeriodSrb * 1000) {
-    bool res = Sensors(0);
-    if (res) {
-      autovkl_timer = srb_timer = millis();
-    }
-    else srb_timer += PERIOD_OPROSA;
-  }
-
-  if (a_flag && autovkl_flag && millis() - autovkl_timer >= PeriodVkl * 60 * 1000) {
-    Sensors(1);
-    autovkl_timer = millis();
-  }
-
-  if (millis() - mess_timer >= MESS_UPD) {
+  if (millis() - mess_timer >= MESS_UPD) {            //обновляем сообщение со временем и температурой по таймеру
     mess_timer = millis();
     Date(0);
   }
 
-  if (sborka_flag && millis() - sborka_timer >= SBORKA_PERIOD) {
+  if (sborka_flag && millis() - sborka_timer >= SBORKA_PERIOD) {                  //пересобираем меню если нужно и подошло время по таймеру
     sborka_timer = millis();
     sborka_flag = false;
     Sborka(0);
   }
 
-  if (fire_on && millis() - fire_read_timer >= FIRE_READ_PERIOD) {
+  if (fire_on && millis() - fire_read_timer >= FIRE_READ_PERIOD) {               //по таймеру следим за состоянием пожарных датчиков
     fire_read_timer = millis();
     Fire(0);
   }
 
-  if (fireres_flag) {
-    Fire(1);
-  }
+  if (fireres_flag) Fire(1);
 }
