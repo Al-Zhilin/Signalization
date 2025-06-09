@@ -11,7 +11,7 @@ void Sborka(bool vk_flag) {
   }
 
   for (byte i = 0; i < (sizeof(Users)/sizeof(Users[0])); i++) {
-    //if (faza_menu[i] == old_faza[i] && faza_menu[i] && memcmp(old_datch, datch, (sizeof(d_pins)/sizeof(d_pins[0])))) faza_menu[i] = 0;    //возвращать пользователя к 0 фазе меню, при изменении кем-то состояний датчиков (проверить работоспособность)
+    //if (faza_menu[i] == old_faza[i] && faza_menu[i] && memcmp(old_datch, datch, (sizeof(d_pins[0])/sizeof(d_pins[0][0])))) faza_menu[i] = 0;    //возвращать пользователя к 0 фазе меню, при изменении кем-то состояний датчиков (проверить работоспособность)
 
     String main_menu = F("");
 

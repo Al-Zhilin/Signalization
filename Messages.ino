@@ -1,5 +1,4 @@
 void newMsg(FB_msg& msg) {
-
   bool sb_flag = false;
 
   if (msg.unix < startUnix) return;
@@ -20,7 +19,7 @@ void newMsg(FB_msg& msg) {
     bot.sendMessage("Между сработками - " + String(EEPROM.read(3)) + "/" + String(PeriodSrb) + " секунд", msg.chatID);
     bot.sendMessage("Между автовключениями датчиков - " + String(EEPROM.read(2)) + "/" + String(PeriodVkl) + " минут", msg.chatID);
     bot.sendMessage("Версия (без разделителей) - " + String(EEPROM.read(1)), msg.chatID);
-    bot.sendMessage("Автовключение: " + String((a_flag) ? "включено" : "выключено"), msg.chatID);
+    bot.sendMessage("Автовключение: " + String((a_flag) ? "включено (✅)" : "выключено (❌)"), msg.chatID);
   }
 
   else if (msg.text == "/тех работы") {
