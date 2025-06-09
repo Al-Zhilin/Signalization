@@ -2,8 +2,6 @@
 #define password ""                                                            //пароль от WiFi сети
 #define BOT_TOKEN ""                                                           //идентификатор бота в телеге
 #define MONITORING "" 							                                           //начало запроса на OpenMonitoring
-#define TERM1_NAME "Дом"                                                       //имя для первого температурного датчика
-#define TERM1_NAME "Улица"                                                     //имя для второго температурного датчика
 #define OTA_NAME ""						                                                 //имя для OTA
 #define OTA_PASS ""		                    			                               //пароль для OTA
  
@@ -26,6 +24,11 @@ const char* r_names[]  = {
   "Реле2",
   "Реле3",
   "Реле4",
+};
+
+const char* term_names[] = {
+  "Темп1",
+  "Темп2",
 };
  
 uint64_t addr[] = {

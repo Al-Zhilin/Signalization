@@ -2,7 +2,6 @@
 #include <ESP32Ping.h>
 #include <EEPROM.h>
 #include <FastBot.h>
-#include <GyverDS18Array.h>
 #include "passwords.h"
  
 #define WIFI_RES_PERIOD 2 * 60 * 1000                                          //если по истечении этого периода (после начала попыток подключения) к WiFi не получиться подключиться, плата будет перезагружена
@@ -39,20 +38,36 @@
 #define POWER_RESET_TIME 10 * 1000                                             //период на который будет отключено питание модема, 1 число - секунды
 #define MODEM_RELE_NUM 2                                                       //номер реле, через которое питается модем (нумерация с 1)
 #define NO_ELECTRICITY 0                                                       //вкл/выкл (1/0 соотв.) уведомлений об изменении наличия напряжения питающей сети (полезно только при наличии бесперебойника на питание платы)
-#define ENABLE_TERM1 1                                                         //подключить температурный датчик 1
-#define ENABLE_TERM2 0                                                         //подключить температурный датчик 2
+#define ENABLED_TERMS 1                                                        //количество датчиков температуры, подключенных к контроллеру
+
+#if (ENABLED_TERMS == 1)
+  #include <GyverDS18.h>
+  GyverDS18Single ds(ThermoPin);
+#endif
+
+#if (ENABLED_TERMS >= 2)
+  if (sizeof(addr)/sizeof(addr[0]) < ENABLED_TERMS || sizeof(term_names)/sizeof(term_names[0]) < ENABLEDENABLED_TERMS) {
+    Serial.println("Количество заданный адресов и/или имен температруных датчиков не совпадает с числом, указанным в ENABLED_TERMS!! Использование датчиков невозможно!");
+    #undef ENABLED_TERMS
+    #define ENABLED_TERMS 0
+  }
+
+  else {
+    #include <GyverDS18Array.h>
+    GyverDS18Array ds(ThermoPin, addr, ENABLED_TERMS);
+  }
+#endif
 
 const byte r_pins[] = {RELAY1, RELAY2, RELAY3, RELAY4}, f_pins[] = {FIRE_SENSOR1, FIRE_SENSOR2};
 const byte d_pins[2][4] = {{DATCH_HOME, DATCH_1, DATCH_2, DATCH_3}, {false, false, true, true}};
 
 FastBot bot(BOT_TOKEN);
-GyverDS18Array ds(14, addr, 3);
 
 byte PeriodVkl = 0, PeriodSrb = 0;  
 int32_t MenuID[(sizeof(Users) / sizeof(Users[0]))] = {}, TimeID[(sizeof(Users) / sizeof(Users[0]))] = {};
 uint32_t startUnix = 0, sborka_timer = 0;
 bool relays[(sizeof(r_pins) / sizeof(r_pins[0]))] = {}, datch[(sizeof(d_pins[0]) / sizeof(d_pins[0][0]))] = {}, faza_menu[(sizeof(Users) / sizeof(Users[0]))] = {}, sborka_flag = false, fire_on = true, fireres_flag = false, a_flag = true;
-float average_ping = 0, temp[2] = {};
+float average_ping = 0, temp[ENABLED_TERMS] = {};
 
 
 
@@ -97,8 +112,11 @@ void setup() {
 
   bot.notify(true);
   EEPROM_START();
-  //ds.setResolution(12);
+  
+  #if (ENABLED_TERMS > 0)
   ds.requestTemp();
+  #endif
+
   Start();
 
   startUnix = bot.getUnix();
@@ -185,7 +203,9 @@ void loop() {
     setSensorsHigh();
   }
 
+  #if (ENABLED_TERMS > 0)
   if (ds.ready()) Temp();
+  #endif
   
   if (millis() - http_timer >= HTTP_PERIOD) {         //Отправляем данные на OpenMonitoring по таймеру
     http_timer = millis();
