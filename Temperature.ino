@@ -1,43 +1,44 @@
+void filtration(float newVal[ENABLED_TERMS]);     //прототип функции. О чудо, компилятор ругается на отсутствие прототипа, хотя в Arduino IDE должен делать его сам. Магия :)
+
 void Temp() {
-  if (!ENABLE_TERM1 && !ENABLE_TERM2) return;
+  static bool error_flag[ENABLED_TERMS] = {false};
+  float new_znach[ENABLED_TERMS] = {};
+  if (!error_flag[0]) for (byte i = 0; i < ENABLED_TERMS; i++)  error_flag[i] = true;
 
-  static bool error_flag[2] = {true, true};
-  float new_znach[2] = {0, 0}; 
-  
-  if (ENABLE_TERM1) {
-    if (!ds.readTemp(0)) {
-      if (error_flag[0]) {
-        bot.sendMessage("Ошибка чтения датчика 1", Users[0]);
-        error_flag[0] = false;
+  #if (ENABLED_TERMS == 1)
+      if (ds.readTemp()) {
+          new_znach[0] = ds.getTemp();
+          error_flag[0] = true;
+      } else {
+          if (error_flag[0]) {
+            bot.sendMessage("Ошибка чтения 1 датчика температуры!", Users[0]);
+            error_flag[0] = false;
+        }
+      }
+  #endif
+
+  #if (ENABLED_TERMS >= 2)
+    for (byte iter = 0; iter < ENABLED_TERMS; iter++) {
+      if (ds.readTemp(iter)) {
+          new_znach[iter] = ds.getTemp();
+          error_flag[iter] = true;
+      } else {
+          if (error_flag[iter]) {
+            bot.sendMessage("Ошибка чтения " + String(iter+1) + " датчика температуры!", Users[0]);
+            error_flag[iter] = false;
+        }
       }
     }
-    else {
-      new_znach[0] = ds.getTemp();
-      error_flag[0] = true;
-    }
-  }
-
-  if (ENABLE_TERM2) {
-    if (!ds.readTemp(1)) {
-      if (error_flag[1]) {
-        bot.sendMessage("Ошибка чтения датчика 2", Users[0]);
-        error_flag[1] = false;
-      }
-    }
-    else {
-      new_znach[1] = ds.getTemp();
-      error_flag[0] = true;
-    }
-  }
+  #endif
 
   ds.requestTemp();
   filtration(new_znach);
 }
 
-void filtration(float newVal[2]) {
+void filtration(float newVal[ENABLED_TERMS]) {
   float k;
   
-  for (byte i = 0; i < 2; i++) {
+  for (byte i = 0; i < ENABLED_TERMS; i++) {
     if (abs(newVal[i] - temp[i]) > 1.0) k = 0.9;
     else if (abs(newVal[i] - temp[i]) > 0.5) k = 0.75;
     else k = 0.05;
