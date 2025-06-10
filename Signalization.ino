@@ -43,11 +43,10 @@
 #if (ENABLED_TERMS == 1)
   #include <GyverDS18.h>
   GyverDS18Single ds(ThermoPin);
-#endif
 
-#if (ENABLED_TERMS >= 2)
+#elif (ENABLED_TERMS >= 2)
   if (sizeof(addr)/sizeof(addr[0]) < ENABLED_TERMS || sizeof(term_names)/sizeof(term_names[0]) < ENABLEDENABLED_TERMS) {
-    Serial.println("Количество заданный адресов и/или имен температруных датчиков не совпадает с числом, указанным в ENABLED_TERMS!! Использование датчиков невозможно!");
+    Serial.println("Количество заданный адресов и/или имен температурных датчиков не совпадает с числом, указанным в ENABLED_TERMS!! Использование датчиков невозможно!");
     #undef ENABLED_TERMS
     #define ENABLED_TERMS 0
   }
@@ -121,6 +120,8 @@ void setup() {
 
   startUnix = bot.getUnix();
   bot.attach(newMsg);
+
+  if (SRB_PERIOD - PeriodSrb < 200)  bot.sendMessage("Допустимый период в функции фильтрации сработок некорректен по отношению к периоду между сработками!! (SRB_PERIOD !!! PeriodSrb)", Users[0]);
 
   Sborka(0);
 }

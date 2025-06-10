@@ -5,8 +5,8 @@ void checkSensors(bool *need_autoOn, uint32_t *on_timer) {
 
   for (byte i = 0; i < sizeof(d_pins[0])/sizeof(d_pins[0][0]); i++) {                 //проходим по всем датчикам
     if (digitalRead(d_pins[0][i])) {                          //если датчик включен && датчик сработал
-      if (datch[i] && millis() - srb_timer[i] >= PeriodSrb*1000 && SensorsFiltration(i)) {
-        message += AlarmString(1, i);          //прогоняем через фильтр, отсеиваем (или хотя бы пытаемся) разные шумы
+      if (datch[i] && millis() - srb_timer[i] >= PeriodSrb*1000) {
+        if (SensorsFiltration(i)) message += AlarmString(1, i);          //прогоняем через фильтр, отсеиваем (или хотя бы пытаемся) разные шумы. Если функция фильтрации возвращает true - фиксируем срабатывание
         srb_timer[i] = millis();
       }
       *on_timer = millis();
