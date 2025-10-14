@@ -8,6 +8,14 @@ void newMsg(FB_msg& msg) {
     ESP.restart();
   }
 
+  else if (msg.text.startsWith("---------------------- Здравствуйте! -----------------------")) {       //подключилась другая плата, тормозим ее срочно!
+    bot.sendMessage("StopSession", msg.chatID);
+  }
+
+  else if (msg.text == "StopSession") {
+    //Доделааать!!!!!!!!
+  }
+
   else if (msg.text == "/start") {
     bot.sendMessage("Здравствуйте!", msg.chatID);
     bot.sendMessage(msg.username + " присоединился к нам!", Users[0]);

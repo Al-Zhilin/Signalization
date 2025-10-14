@@ -1,6 +1,5 @@
 void checkSensors(bool *need_autoOn, uint32_t *on_timer) {
   String message = "";                  //в эту строку будем добавлять все сообщения о сработке датчика(-ов)
-  *need_autoOn = false;
   static uint32_t srb_timer[sizeof(d_pins[0])/sizeof(d_pins[0][0])] = {};
 
   for (byte i = 0; i < sizeof(d_pins[0])/sizeof(d_pins[0][0]); i++) {                 //проходим по всем датчикам
